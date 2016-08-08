@@ -77,8 +77,8 @@ class BaseServiceHandler:
         ['contactperson', 'ContactPerson', str],
         ['contactorganization', 'ContactOrganization', str]
     ]
-    
-    CONF_CONTACT_ADDRESS = [   
+
+    CONF_CONTACT_ADDRESS = [
         ['addresstype', 'AddressType', str],
         ['address', 'Address', str],
         ['city', 'City', str],
@@ -86,7 +86,7 @@ class BaseServiceHandler:
         ['postcode', 'PostCode', str],
         ['country', 'Country', str]
     ]
-    
+
     CONF_CONTACT = [
         ['contactposition', 'ContactPosition', str],
         ['contactvoicetelephone', 'ContactVoiceTelephone', str],
@@ -115,7 +115,7 @@ class BaseServiceHandler:
             elif not paramdef.mandatory and paramdef.default:
                 finalparams[paramname] = paramdef.default
         return finalparams
-    
+
     def processServiceCapabilities(self, capetree):
         if len(self.conf.items('service')) > 0:
             servicee = capetree.find('Service')
@@ -261,7 +261,7 @@ class CRS:
 
     def forward(self, x, y):
         if not self.proj:
-            self.proj = Projection('+init=%s:%s' % (self.namespace, self.code))        
+            self.proj = Projection('+init=%s:%s' % (self.namespace, self.code))
         return self.proj.forward(Coord(x, y))
 
 class CRSFactory:
@@ -284,7 +284,7 @@ def copy_layer(obj):
         lyr.title = obj.title
     else:
         lyr.title = ''
-    if hasattr(obj, 'abstract'):    
+    if hasattr(obj, 'abstract'):
         lyr.abstract = obj.abstract
     else:
         lyr.abstract = ''
@@ -298,9 +298,10 @@ def copy_layer(obj):
     lyr.minzoom = obj.minzoom
     lyr.maxzoom = obj.maxzoom
     lyr.active = obj.active
-    lyr.queryable = obj.queryable    
+    lyr.queryable = obj.queryable
     lyr.clear_label_cache = obj.clear_label_cache
-    lyr.datasource = obj.datasource
+    if obj.datasource is not None:
+        lyr.datasource = obj.datasource
     if hasattr(obj,'wmsdefaultstyle'):
         lyr.wmsdefaultstyle = obj.wmsdefaultstyle
     if hasattr(obj,'wmsextrastyles'):
@@ -310,7 +311,7 @@ def copy_layer(obj):
     if hasattr(lyr, 'wms_srs'):
         lyr.wms_srs = obj.wms_srs
     return lyr
-      
+
 class WMSBaseServiceHandler(BaseServiceHandler):
 
     def GetMap(self, params):
@@ -340,7 +341,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
                         writer.addfeature()
                         if mapnik_version() >= 800:
                             for prop,value in feat.attributes.iteritems():
-                                writer.addattribute(prop, value)                        
+                                writer.addattribute(prop, value)
                         else:
                             for prop in feat.properties:
                                 writer.addattribute(prop[0], prop[1])
@@ -359,7 +360,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
                                 writer.addfeature()
                                 if mapnik_version() >= 800:
                                     for prop,value in feat.attributes.iteritems():
-                                        writer.addattribute(prop, value)                        
+                                        writer.addattribute(prop, value)
                                 else:
                                     for prop in feat.properties:
                                         writer.addattribute(prop[0], prop[1])
@@ -386,7 +387,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
 
         transparent = params.get('transparent', '').lower() == 'true'
 
-        # disable transparent on incompatible formats 
+        # disable transparent on incompatible formats
         if transparent and params.get('format', '') == 'image/jpeg':
             transparent = False
 
@@ -394,7 +395,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
             # transparent has highest priority
             pass
         elif params.has_key('bgcolor'):
-            # if not transparent use bgcolor in url            
+            # if not transparent use bgcolor in url
             m.background = params['bgcolor']
         else:
             # if not bgcolor in url use map background
@@ -428,7 +429,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
                 else:
                     layer.styles.append(layer.meta_style)
                     m.append_style(layer.meta_style, self.mapfactory.meta_styles[layer.meta_style])
-                    m.layers.append(layer)        
+                    m.layers.append(layer)
         # a non WMS spec way of requesting all layers
         # uses orderedlayers that preserves original ordering in XML mapfile
         elif params['layers'] and params['layers'][0] == '__all__':
@@ -484,7 +485,7 @@ class WMSBaseServiceHandler(BaseServiceHandler):
                             m.append_style(stylename, self.mapfactory.styles[stylename])
                         else:
                             raise ServerConfigurationError('Layer "%s" refers to non-existent style "%s".' % (layername, stylename))
-                
+
                 m.layers.append(layer)
         m.zoom_to_box(Envelope(params['bbox'][0], params['bbox'][1], params['bbox'][2], params['bbox'][3]))
         return m
@@ -567,7 +568,7 @@ class BaseExceptionHandler:
         return Response(params['format'].replace('8',''), fh.read(), status_code=404)
 
 class Projection(MapnikProjection):
-    
+
     def epsgstring(self):
         return self.params().split('=')[1].upper()
 
@@ -618,7 +619,7 @@ class XMLFeatureInfo:
         feature = ElementTree.Element('feature')
         self.currentlayer.append(feature)
         self.currentfeature = feature
-    
+
     def addattribute(self, name, value):
         attribute = ElementTree.Element('attribute')
         attname = ElementTree.Element('name')
@@ -637,7 +638,7 @@ class XMLFeatureInfo:
         attribute.append(attname)
         attribute.append(attvalue)
         self.currentfeature.append(attribute)
-    
+
     def __str__(self):
         return '<?xml version="1.0"?>\n' + ElementTree.tostring(self.rootelement, encoding='utf-8')
 
