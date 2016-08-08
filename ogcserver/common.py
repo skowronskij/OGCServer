@@ -318,6 +318,10 @@ class WMSBaseServiceHandler(BaseServiceHandler):
         im = Image(params['width'], params['height'])
         render(m, im)
         format = PIL_TYPE_MAPPING[params['format']]
+        if mapnik_version() >= 200300:
+            # Mapnik 2.3 uses png8 as default, use png32 for backwards compatibility
+            if format == 'png':
+                format = 'png32'
         return Response(params['format'].replace('8',''), im.tostring(format))
 
     def GetFeatureInfo(self, params, querymethodname='query_point'):
@@ -380,13 +384,31 @@ class WMSBaseServiceHandler(BaseServiceHandler):
         #    raise OGCException('STYLES length does not match LAYERS length.')
         m = Map(params['width'], params['height'], '+init=%s' % params['crs'])
 
-        if params.has_key('transparent') and params['transparent'] in ('FALSE','False','false'):
-            if params['bgcolor']:
-                m.background = params['bgcolor']
-        elif not params.has_key('transparent') and self.mapfactory.map_attributes.get('bgcolor'):
-            m.background = self.mapfactory.map_attributes['bgcolor']
+        transparent = params.get('transparent', '').lower() == 'true'
+
+        # disable transparent on incompatible formats 
+        if transparent and params.get('format', '') == 'image/jpeg':
+            transparent = False
+
+        if transparent:
+            # transparent has highest priority
+            pass
+        elif params.has_key('bgcolor'):
+            # if not transparent use bgcolor in url            
+            m.background = params['bgcolor']
         else:
-            m.background = Color(0, 0, 0, 0)
+            # if not bgcolor in url use map background
+            if mapnik_version() >= 200000:
+                bgcolor = self.mapfactory.map_attributes.get('bgcolor', None)
+            else:
+                bgcolor = self.mapfactory.map_attributes.get('background-color', None)
+
+            if bgcolor:
+                m.background = bgcolor
+            else:
+                # if not map background defined use white color
+                m.background = Color(255, 255, 255, 255)
+
 
         if params.has_key('buffer_size'):
             if params['buffer_size']:
@@ -444,6 +466,8 @@ class WMSBaseServiceHandler(BaseServiceHandler):
                     try:
                         reqstyle = params['styles'][layerindex]
                     except IndexError:
+                        reqstyle = ''
+                    if len(layer.wmsextrastyles) > 1 and reqstyle == 'default':
                         reqstyle = ''
                     if reqstyle and reqstyle not in layer.wmsextrastyles:
                         raise OGCException('Invalid style "%s" requested for layer "%s".' % (reqstyle, layername), 'StyleNotDefined')
