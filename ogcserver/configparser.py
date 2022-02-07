@@ -2,7 +2,10 @@
     non-existent.
 """
 
-from ConfigParser import SafeConfigParser as OrigSafeConfigParser
+import imp
+configparsersrc = imp.load_compiled("ConfigParser", "/usr/lib/python2.7/ConfigParser.pyc")
+OrigSafeConfigParser = configparsersrc.SafeConfigParser
+#from configparsersrc import SafeConfigParser as OrigSafeConfigParser
 
 class SafeConfigParser(OrigSafeConfigParser):
     
